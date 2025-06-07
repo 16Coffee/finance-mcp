@@ -1,60 +1,50 @@
 import json
+import os
 from enum import Enum
 
 import pandas as pd
-import yfinance as yf
+from alpha_vantage.alphaintelligence import AlphaIntelligence
+from alpha_vantage.fundamentaldata import FundamentalData
+from alpha_vantage.options import Options
+from alpha_vantage.timeseries import TimeSeries
 from mcp.server.fastmcp import FastMCP
 
 
 # Define an enum for the type of financial statement
 class FinancialType(str, Enum):
-    income_stmt = "income_stmt"
-    quarterly_income_stmt = "quarterly_income_stmt"
-    balance_sheet = "balance_sheet"
-    quarterly_balance_sheet = "quarterly_balance_sheet"
-    cashflow = "cashflow"
-    quarterly_cashflow = "quarterly_cashflow"
-
-
-class HolderType(str, Enum):
-    major_holders = "major_holders"
-    institutional_holders = "institutional_holders"
-    mutualfund_holders = "mutualfund_holders"
-    insider_transactions = "insider_transactions"
-    insider_purchases = "insider_purchases"
-    insider_roster_holders = "insider_roster_holders"
-
-
-class RecommendationType(str, Enum):
-    recommendations = "recommendations"
-    upgrades_downgrades = "upgrades_downgrades"
+    income_stmt_annual = "income_stmt_annual"
+    income_stmt_quarterly = "income_stmt_quarterly"
+    balance_sheet_annual = "balance_sheet_annual"
+    balance_sheet_quarterly = "balance_sheet_quarterly"
+    cashflow_annual = "cashflow_annual"
+    cashflow_quarterly = "cashflow_quarterly"
 
 
 # Initialize FastMCP server
-yfinance_server = FastMCP(
-    "yfinance",
+alphavantage_server = FastMCP(
+    "alphavantage",
     instructions="""
-# Yahoo Finance MCP Server
+# Alpha Vantage MCP Server
 
-This server is used to get information about a given ticker symbol from yahoo finance.
+This server retrieves stock market data using Alpha Vantage APIs.
+Before using these tools, set the `ALPHAVANTAGE_API_KEY` environment
+variable to your Alpha Vantage API key.
 
-Available tools:
-- get_historical_stock_prices: Get historical stock prices for a given ticker symbol from yahoo finance. Include the following information: Date, Open, High, Low, Close, Volume, Adj Close.
-- get_stock_info: Get stock information for a given ticker symbol from yahoo finance. Include the following information: Stock Price & Trading Info, Company Information, Financial Metrics, Earnings & Revenue, Margins & Returns, Dividends, Balance Sheet, Ownership, Analyst Coverage, Risk Metrics, Other.
-- get_yahoo_finance_news: Get news for a given ticker symbol from yahoo finance.
-- get_stock_actions: Get stock dividends and stock splits for a given ticker symbol from yahoo finance.
-- get_financial_statement: Get financial statement for a given ticker symbol from yahoo finance. You can choose from the following financial statement types: income_stmt, quarterly_income_stmt, balance_sheet, quarterly_balance_sheet, cashflow, quarterly_cashflow.
-- get_holder_info: Get holder information for a given ticker symbol from yahoo finance. You can choose from the following holder types: major_holders, institutional_holders, mutualfund_holders, insider_transactions, insider_purchases, insider_roster_holders.
-- get_option_expiration_dates: Fetch the available options expiration dates for a given ticker symbol.
+Available.tools:
+- get_historical_stock_prices: Get historical stock prices for a given ticker symbol. Includes Date, Open, High, Low, Close, Volume, and Adjusted Close where available.
+- get_stock_info: Get company overview and financial metrics for a given ticker symbol.
+- get_news_sentiment: Get recent news articles for a given ticker symbol.
+- get_stock_actions: Get dividends and stock split history for a given ticker symbol.
+- get_financial_statement: Get financial statements for a given ticker symbol. Supported types: income_stmt_annual, income_stmt_quarterly, balance_sheet_annual, balance_sheet_quarterly, cashflow_annual, cashflow_quarterly.
+- get_option_expiration_dates: Fetch available option expiration dates for a given ticker symbol.
 - get_option_chain: Fetch the option chain for a given ticker symbol, expiration date, and option type.
-- get_recommendations: Get recommendations or upgrades/downgrades for a given ticker symbol from yahoo finance. You can also specify the number of months back to get upgrades/downgrades for, default is 12.
 """,
 )
 
 
-@yfinance_server.tool(
+@alphavantage_server.tool(
     name="get_historical_stock_prices",
-    description="""Get historical stock prices for a given ticker symbol from yahoo finance. Include the following information: Date, Open, High, Low, Close, Volume, Adj Close.
+    description="""Get historical stock prices for a given ticker symbol using Alpha Vantage. Includes Date, Open, High, Low, Close, Volume, and Adjusted Close when available.
 Args:
     ticker: str
         The ticker symbol of the stock to get historical prices for, e.g. "AAPL"
@@ -71,40 +61,58 @@ Args:
 async def get_historical_stock_prices(
     ticker: str, period: str = "1mo", interval: str = "1d"
 ) -> str:
-    """Get historical stock prices for a given ticker symbol
+    """Get historical stock prices for a given ticker symbol"""
 
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get historical prices for, e.g. "AAPL"
-        period : str
-            Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
-            Either Use period parameter or use start and end
-            Default is "1mo"
-        interval : str
-            Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
-            Intraday data cannot extend last 60 days
-            Default is "1d"
-    """
-    company = yf.Ticker(ticker)
+    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    if not api_key:
+        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+
+    ts = TimeSeries(key=api_key, output_format="pandas")
     try:
-        if company.isin is None:
-            print(f"Company ticker {ticker} not found.")
-            return f"Company ticker {ticker} not found."
+        if interval in ["1min", "5min", "15min", "30min", "60min"]:
+            data, _ = ts.get_intraday(symbol=ticker, interval=interval, outputsize="full")
+        elif interval == "1wk":
+            data, _ = ts.get_weekly(symbol=ticker)
+        elif interval == "1mo":
+            data, _ = ts.get_monthly(symbol=ticker)
+        elif interval == "1d":
+            data, _ = ts.get_daily(symbol=ticker, outputsize="full")
+        else:
+            return "Error: invalid interval"
     except Exception as e:
-        print(f"Error: getting historical stock prices for {ticker}: {e}")
         return f"Error: getting historical stock prices for {ticker}: {e}"
 
-    # If the company is found, get the historical data
-    hist_data = company.history(period=period, interval=interval)
-    hist_data = hist_data.reset_index(names="Date")
-    hist_data = hist_data.to_json(orient="records", date_format="iso")
-    return hist_data
+    data = data.rename(columns=lambda c: c.split(". ")[-1].title())
+    data = data.reset_index(names="Date")
+
+    period_map = {
+        "1d": pd.Timedelta(days=1),
+        "5d": pd.Timedelta(days=5),
+        "1mo": pd.Timedelta(days=30),
+        "3mo": pd.Timedelta(days=90),
+        "6mo": pd.Timedelta(days=180),
+        "1y": pd.Timedelta(days=365),
+        "2y": pd.Timedelta(days=730),
+        "5y": pd.Timedelta(days=1825),
+        "10y": pd.Timedelta(days=3650),
+    }
+
+    if period == "ytd":
+        start = pd.Timestamp.now().replace(month=1, day=1)
+    elif period != "max" and period in period_map:
+        start = pd.Timestamp.now() - period_map[period]
+    else:
+        start = None
+
+    if start is not None:
+        data = data[data["Date"] >= start]
+
+    return data.to_json(orient="records", date_format="iso")
 
 
-@yfinance_server.tool(
+@alphavantage_server.tool(
     name="get_stock_info",
-    description="""Get stock information for a given ticker symbol from yahoo finance. Include the following information:
-Stock Price & Trading Info, Company Information, Financial Metrics, Earnings & Revenue, Margins & Returns, Dividends, Balance Sheet, Ownership, Analyst Coverage, Risk Metrics, Other.
+    description="""Get company overview and key metrics for a given ticker symbol using Alpha Vantage.
 
 Args:
     ticker: str
@@ -113,69 +121,56 @@ Args:
 )
 async def get_stock_info(ticker: str) -> str:
     """Get stock information for a given ticker symbol"""
-    company = yf.Ticker(ticker)
+    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    if not api_key:
+        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+
+    fd = FundamentalData(key=api_key)
     try:
-        if company.isin is None:
-            print(f"Company ticker {ticker} not found.")
-            return f"Company ticker {ticker} not found."
+        data, _ = fd.get_company_overview(symbol=ticker)
     except Exception as e:
-        print(f"Error: getting stock information for {ticker}: {e}")
         return f"Error: getting stock information for {ticker}: {e}"
-    info = company.info
-    return json.dumps(info)
+    return json.dumps(data)
 
 
-@yfinance_server.tool(
-    name="get_yahoo_finance_news",
-    description="""Get news for a given ticker symbol from yahoo finance.
+@alphavantage_server.tool(
+    name="get_news_sentiment",
+    description="""Get news for a given ticker symbol using Alpha Vantage.
 
 Args:
     ticker: str
         The ticker symbol of the stock to get news for, e.g. "AAPL"
 """,
 )
-async def get_yahoo_finance_news(ticker: str) -> str:
-    """Get news for a given ticker symbol
+async def get_news_sentiment(ticker: str) -> str:
+    """Get news for a given ticker symbol"""
 
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get news for, e.g. "AAPL"
-    """
-    company = yf.Ticker(ticker)
-    try:
-        if company.isin is None:
-            print(f"Company ticker {ticker} not found.")
-            return f"Company ticker {ticker} not found."
-    except Exception as e:
-        print(f"Error: getting news for {ticker}: {e}")
-        return f"Error: getting news for {ticker}: {e}"
+    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    if not api_key:
+        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
 
-    # If the company is found, get the news
+    ai = AlphaIntelligence(key=api_key)
     try:
-        news = company.news
+        data, _ = ai.get_news_sentiment(tickers=ticker)
     except Exception as e:
-        print(f"Error: getting news for {ticker}: {e}")
         return f"Error: getting news for {ticker}: {e}"
 
     news_list = []
-    for news in company.news:
-        if news.get("content", {}).get("contentType", "") == "STORY":
-            title = news.get("content", {}).get("title", "")
-            summary = news.get("content", {}).get("summary", "")
-            description = news.get("content", {}).get("description", "")
-            url = news.get("content", {}).get("canonicalUrl", {}).get("url", "")
-            news_list.append(
-                f"Title: {title}\nSummary: {summary}\nDescription: {description}\nURL: {url}"
-            )
+    for item in data.get("feed", []):
+        title = item.get("title", "")
+        summary = item.get("summary", "")
+        url = item.get("url", "")
+        news_list.append(f"Title: {title}\nSummary: {summary}\nURL: {url}")
+
     if not news_list:
-        print(f"No news found for company that searched with {ticker} ticker.")
-        return f"No news found for company that searched with {ticker} ticker."
+        return f"No news found for {ticker}"
+
     return "\n\n".join(news_list)
 
 
-@yfinance_server.tool(
+@alphavantage_server.tool(
     name="get_stock_actions",
-    description="""Get stock dividends and stock splits for a given ticker symbol from yahoo finance.
+    description="""Get stock dividends and stock splits for a given ticker symbol using Alpha Vantage.
 
 Args:
     ticker: str
@@ -184,119 +179,67 @@ Args:
 )
 async def get_stock_actions(ticker: str) -> str:
     """Get stock dividends and stock splits for a given ticker symbol"""
+    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    if not api_key:
+        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+
+    fd = FundamentalData(key=api_key, output_format="pandas")
     try:
-        company = yf.Ticker(ticker)
+        div_df, _ = fd.get_dividends(symbol=ticker)
+        split_df, _ = fd.get_splits(symbol=ticker)
     except Exception as e:
-        print(f"Error: getting stock actions for {ticker}: {e}")
         return f"Error: getting stock actions for {ticker}: {e}"
-    actions_df = company.actions
-    actions_df = actions_df.reset_index(names="Date")
-    return actions_df.to_json(orient="records", date_format="iso")
+
+    div_df = div_df.reset_index(names="date")
+    split_df = split_df.reset_index(names="date")
+    return json.dumps(
+        {"dividends": div_df.to_dict("records"), "splits": split_df.to_dict("records")}
+    )
 
 
-@yfinance_server.tool(
+@alphavantage_server.tool(
     name="get_financial_statement",
-    description="""Get financial statement for a given ticker symbol from yahoo finance. You can choose from the following financial statement types: income_stmt, quarterly_income_stmt, balance_sheet, quarterly_balance_sheet, cashflow, quarterly_cashflow.
+    description="""Get financial statement for a given ticker symbol using Alpha Vantage. Supported types: income_stmt_annual, income_stmt_quarterly, balance_sheet_annual, balance_sheet_quarterly, cashflow_annual, cashflow_quarterly.
 
 Args:
     ticker: str
         The ticker symbol of the stock to get financial statement for, e.g. "AAPL"
     financial_type: str
-        The type of financial statement to get. You can choose from the following financial statement types: income_stmt, quarterly_income_stmt, balance_sheet, quarterly_balance_sheet, cashflow, quarterly_cashflow.
+        The type of financial statement to get. Use one of: income_stmt_annual, income_stmt_quarterly, balance_sheet_annual, balance_sheet_quarterly, cashflow_annual, cashflow_quarterly.
 """,
 )
 async def get_financial_statement(ticker: str, financial_type: str) -> str:
     """Get financial statement for a given ticker symbol"""
 
-    company = yf.Ticker(ticker)
+    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    if not api_key:
+        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+
+    fd = FundamentalData(key=api_key)
     try:
-        if company.isin is None:
-            print(f"Company ticker {ticker} not found.")
-            return f"Company ticker {ticker} not found."
+        if financial_type == FinancialType.income_stmt_annual:
+            data, _ = fd.get_income_statement_annual(symbol=ticker)
+        elif financial_type == FinancialType.income_stmt_quarterly:
+            data, _ = fd.get_income_statement_quarterly(symbol=ticker)
+        elif financial_type == FinancialType.balance_sheet_annual:
+            data, _ = fd.get_balance_sheet_annual(symbol=ticker)
+        elif financial_type == FinancialType.balance_sheet_quarterly:
+            data, _ = fd.get_balance_sheet_quarterly(symbol=ticker)
+        elif financial_type == FinancialType.cashflow_annual:
+            data, _ = fd.get_cash_flow_annual(symbol=ticker)
+        elif financial_type == FinancialType.cashflow_quarterly:
+            data, _ = fd.get_cash_flow_quarterly(symbol=ticker)
+        else:
+            return "Error: invalid financial type"
     except Exception as e:
-        print(f"Error: getting financial statement for {ticker}: {e}")
         return f"Error: getting financial statement for {ticker}: {e}"
 
-    if financial_type == FinancialType.income_stmt:
-        financial_statement = company.income_stmt
-    elif financial_type == FinancialType.quarterly_income_stmt:
-        financial_statement = company.quarterly_income_stmt
-    elif financial_type == FinancialType.balance_sheet:
-        financial_statement = company.balance_sheet
-    elif financial_type == FinancialType.quarterly_balance_sheet:
-        financial_statement = company.quarterly_balance_sheet
-    elif financial_type == FinancialType.cashflow:
-        financial_statement = company.cashflow
-    elif financial_type == FinancialType.quarterly_cashflow:
-        financial_statement = company.quarterly_cashflow
-    else:
-        return f"Error: invalid financial type {financial_type}. Please use one of the following: {FinancialType.income_stmt}, {FinancialType.quarterly_income_stmt}, {FinancialType.balance_sheet}, {FinancialType.quarterly_balance_sheet}, {FinancialType.cashflow}, {FinancialType.quarterly_cashflow}."
-
-    # Create a list to store all the json objects
-    result = []
-
-    # Loop through each column (date)
-    for column in financial_statement.columns:
-        if isinstance(column, pd.Timestamp):
-            date_str = column.strftime("%Y-%m-%d")  # Format as YYYY-MM-DD
-        else:
-            date_str = str(column)
-
-        # Create a dictionary for each date
-        date_obj = {"date": date_str}
-
-        # Add each metric as a key-value pair
-        for index, value in financial_statement[column].items():
-            # Add the value, handling NaN values
-            date_obj[index] = None if pd.isna(value) else value
-
-        result.append(date_obj)
-
-    return json.dumps(result)
+    return json.dumps(data)
 
 
-@yfinance_server.tool(
-    name="get_holder_info",
-    description="""Get holder information for a given ticker symbol from yahoo finance. You can choose from the following holder types: major_holders, institutional_holders, mutualfund_holders, insider_transactions, insider_purchases, insider_roster_holders.
-
-Args:
-    ticker: str
-        The ticker symbol of the stock to get holder information for, e.g. "AAPL"
-    holder_type: str
-        The type of holder information to get. You can choose from the following holder types: major_holders, institutional_holders, mutualfund_holders, insider_transactions, insider_purchases, insider_roster_holders.
-""",
-)
-async def get_holder_info(ticker: str, holder_type: str) -> str:
-    """Get holder information for a given ticker symbol"""
-
-    company = yf.Ticker(ticker)
-    try:
-        if company.isin is None:
-            print(f"Company ticker {ticker} not found.")
-            return f"Company ticker {ticker} not found."
-    except Exception as e:
-        print(f"Error: getting holder info for {ticker}: {e}")
-        return f"Error: getting holder info for {ticker}: {e}"
-
-    if holder_type == HolderType.major_holders:
-        return company.major_holders.reset_index(names="metric").to_json(orient="records")
-    elif holder_type == HolderType.institutional_holders:
-        return company.institutional_holders.to_json(orient="records")
-    elif holder_type == HolderType.mutualfund_holders:
-        return company.mutualfund_holders.to_json(orient="records", date_format="iso")
-    elif holder_type == HolderType.insider_transactions:
-        return company.insider_transactions.to_json(orient="records", date_format="iso")
-    elif holder_type == HolderType.insider_purchases:
-        return company.insider_purchases.to_json(orient="records", date_format="iso")
-    elif holder_type == HolderType.insider_roster_holders:
-        return company.insider_roster_holders.to_json(orient="records", date_format="iso")
-    else:
-        return f"Error: invalid holder type {holder_type}. Please use one of the following: {HolderType.major_holders}, {HolderType.institutional_holders}, {HolderType.mutualfund_holders}, {HolderType.insider_transactions}, {HolderType.insider_purchases}, {HolderType.insider_roster_holders}."
-
-
-@yfinance_server.tool(
+@alphavantage_server.tool(
     name="get_option_expiration_dates",
-    description="""Fetch the available options expiration dates for a given ticker symbol.
+    description="""Fetch the available options expiration dates for a given ticker symbol using Alpha Vantage.
 
 Args:
     ticker: str
@@ -306,20 +249,26 @@ Args:
 async def get_option_expiration_dates(ticker: str) -> str:
     """Fetch the available options expiration dates for a given ticker symbol."""
 
-    company = yf.Ticker(ticker)
+    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    if not api_key:
+        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+
+    opt = Options(key=api_key)
     try:
-        if company.isin is None:
-            print(f"Company ticker {ticker} not found.")
-            return f"Company ticker {ticker} not found."
+        data, _ = opt.get_realtime_options(symbol=ticker)
     except Exception as e:
-        print(f"Error: getting option expiration dates for {ticker}: {e}")
         return f"Error: getting option expiration dates for {ticker}: {e}"
-    return json.dumps(company.options)
+
+    if isinstance(data, pd.DataFrame):
+        expirations = data["expiration"].dropna().astype(str).unique().tolist()
+    else:
+        expirations = {item.get("expiration") for item in data if item.get("expiration")}
+    return json.dumps(sorted(expirations))
 
 
-@yfinance_server.tool(
+@alphavantage_server.tool(
     name="get_option_chain",
-    description="""Fetch the option chain for a given ticker symbol, expiration date, and option type.
+    description="""Fetch the option chain for a given ticker symbol, expiration date, and option type using Alpha Vantage.
 
 Args:
     ticker: str
@@ -331,87 +280,35 @@ Args:
 """,
 )
 async def get_option_chain(ticker: str, expiration_date: str, option_type: str) -> str:
-    """Fetch the option chain for a given ticker symbol, expiration date, and option type.
+    """Fetch the option chain for a given ticker symbol, expiration date, and option type."""
 
-    Args:
-        ticker: The ticker symbol of the stock
-        expiration_date: The expiration date for the options chain (format: 'YYYY-MM-DD')
-        option_type: The type of option to fetch ('calls' or 'puts')
+    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    if not api_key:
+        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
 
-    Returns:
-        str: JSON string containing the option chain data
-    """
-
-    company = yf.Ticker(ticker)
+    opt = Options(key=api_key)
     try:
-        if company.isin is None:
-            print(f"Company ticker {ticker} not found.")
-            return f"Company ticker {ticker} not found."
+        data, _ = opt.get_realtime_options(symbol=ticker)
     except Exception as e:
-        print(f"Error: getting option chain for {ticker}: {e}")
         return f"Error: getting option chain for {ticker}: {e}"
 
-    # Check if the expiration date is valid
-    if expiration_date not in company.options:
-        return f"Error: No options available for the date {expiration_date}. You can use `get_option_expiration_dates` to get the available expiration dates."
+    if isinstance(data, pd.DataFrame):
+        filtered = data[
+            (data["expiration"] == expiration_date)
+            & (data["type"].str.lower() == option_type.lower())
+        ]
+        return filtered.to_json(orient="records", date_format="iso")
 
-    # Check if the option type is valid
-    if option_type not in ["calls", "puts"]:
-        return "Error: Invalid option type. Please use 'calls' or 'puts'."
-
-    # Get the option chain
-    option_chain = company.option_chain(expiration_date)
-    if option_type == "calls":
-        return option_chain.calls.to_json(orient="records", date_format="iso")
-    elif option_type == "puts":
-        return option_chain.puts.to_json(orient="records", date_format="iso")
-    else:
-        return f"Error: invalid option type {option_type}. Please use one of the following: calls, puts."
-
-
-@yfinance_server.tool(
-    name="get_recommendations",
-    description="""Get recommendations or upgrades/downgrades for a given ticker symbol from yahoo finance. You can also specify the number of months back to get upgrades/downgrades for, default is 12.
-
-Args:
-    ticker: str
-        The ticker symbol of the stock to get recommendations for, e.g. "AAPL"
-    recommendation_type: str
-        The type of recommendation to get. You can choose from the following recommendation types: recommendations, upgrades_downgrades.
-    months_back: int
-        The number of months back to get upgrades/downgrades for, default is 12.
-""",
-)
-async def get_recommendations(ticker: str, recommendation_type: str, months_back: int = 12) -> str:
-    """Get recommendations or upgrades/downgrades for a given ticker symbol"""
-    company = yf.Ticker(ticker)
-    try:
-        if company.isin is None:
-            print(f"Company ticker {ticker} not found.")
-            return f"Company ticker {ticker} not found."
-    except Exception as e:
-        print(f"Error: getting recommendations for {ticker}: {e}")
-        return f"Error: getting recommendations for {ticker}: {e}"
-    try:
-        if recommendation_type == RecommendationType.recommendations:
-            return company.recommendations.to_json(orient="records")
-        elif recommendation_type == RecommendationType.upgrades_downgrades:
-            # Get the upgrades/downgrades based on the cutoff date
-            upgrades_downgrades = company.upgrades_downgrades.reset_index()
-            cutoff_date = pd.Timestamp.now() - pd.DateOffset(months=months_back)
-            upgrades_downgrades = upgrades_downgrades[
-                upgrades_downgrades["GradeDate"] >= cutoff_date
-            ]
-            upgrades_downgrades = upgrades_downgrades.sort_values("GradeDate", ascending=False)
-            # Get the first occurrence (most recent) for each firm
-            latest_by_firm = upgrades_downgrades.drop_duplicates(subset=["Firm"])
-            return latest_by_firm.to_json(orient="records", date_format="iso")
-    except Exception as e:
-        print(f"Error: getting recommendations for {ticker}: {e}")
-        return f"Error: getting recommendations for {ticker}: {e}"
+    filtered = [
+        item
+        for item in data
+        if item.get("expiration") == expiration_date
+        and item.get("type", "").lower() == option_type.lower()
+    ]
+    return json.dumps(filtered)
 
 
 if __name__ == "__main__":
     # Initialize and run the server
-    print("Starting Yahoo Finance MCP server...")
-    yfinance_server.run(transport="stdio")
+    print("Starting Alpha Vantage MCP server...")
+    alphavantage_server.run(transport="stdio")
