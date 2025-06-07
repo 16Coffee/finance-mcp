@@ -1,12 +1,12 @@
-# Yahoo Finance MCP 服务器
+# Alpha Vantage MCP 服务器
 
 <div align="right">
   <a href="README.md">English</a> | <a href="README.zh.md">中文</a>
 </div>
 
-这是一个基于模型上下文协议（MCP）的服务器，提供来自 Yahoo Finance 的全面金融数据。它允许您获取股票的详细信息，包括历史价格、公司信息、财务报表、期权数据和市场新闻。
+这是一个基于模型上下文协议（MCP）的服务器，提供来自 Alpha Vantage 的全面金融数据。它允许您获取股票的详细信息，包括历史价格、公司信息、财务报表、期权数据和市场新闻。
 
-[![smithery badge](https://smithery.ai/badge/@Alex2Yang97/yahoo-finance-mcp)](https://smithery.ai/server/@Alex2Yang97/yahoo-finance-mcp)
+[![smithery badge](https://smithery.ai/badge/@Alex2Yang97/alphavantage-mcp)](https://smithery.ai/server/@Alex2Yang97/alphavantage-mcp)
 
 ## 演示
 
@@ -22,15 +22,14 @@
 |------|-------------|
 | `get_historical_stock_prices` | 获取股票的历史 OHLCV 数据，可自定义时间段和间隔 |
 | `get_stock_info` | 获取全面的股票数据，包括价格、指标和公司详情 |
-| `get_yahoo_finance_news` | 获取股票的最新新闻文章 |
+| `get_news_sentiment` | 获取股票的最新新闻文章 |
 | `get_stock_actions` | 获取股票分红和拆股历史 |
 
 ### 财务报表
 
 | 工具 | 描述 |
 |------|-------------|
-| `get_financial_statement` | 获取利润表、资产负债表或现金流量表（年度/季度） |
-| `get_holder_info` | 获取主要股东、机构股东、共同基金或内幕交易信息 |
+| `get_financial_statement` | 使用 Alpha Vantage 获取利润表、资产负债表或现金流量表（年度/季度） |
 
 ### 期权数据
 
@@ -38,12 +37,6 @@
 |------|-------------|
 | `get_option_expiration_dates` | 获取可用的期权到期日期 |
 | `get_option_chain` | 获取特定到期日期和类型（看涨/看跌）的期权链 |
-
-### 分析师信息
-
-| 工具 | 描述 |
-|------|-------------|
-| `get_recommendations` | 获取分析师推荐或评级变更历史 |
 
 ## 实际应用场景
 
@@ -60,25 +53,21 @@
 ### 市场研究
 
 - **新闻分析**："获取关于 Meta Platforms 的最新新闻文章。"
-- **机构活动**："显示苹果股票的机构股东。"
-- **内幕交易**："特斯拉最近的内幕交易有哪些？"
+- **市场动态**："列出今日涨幅和跌幅最大的股票。"
 - **期权分析**："获取 SPY 在 2024-06-21 到期的看涨期权链。"
-- **分析师覆盖**："亚马逊过去 3 个月的分析师推荐是什么？"
 
 ### 投资研究
 
 - "使用微软最新的季度财务报表创建其财务健康状况的全面分析。"
 - "比较可口可乐和百事可乐的分红历史和股票拆分。"
-- "分析特斯拉过去一年的机构所有权变化。"
-- "生成一份关于苹果股票 30 天到期的期权市场活动报告。"
-- "总结过去 6 个月科技行业的最新分析师评级变更。"
+ - "生成一份关于苹果股票 30 天到期的期权市场活动报告。"
 
 ## 系统要求
 
 - Python 3.11 或更高版本
 - `pyproject.toml` 中列出的依赖项，包括：
   - mcp
-  - yfinance
+  - alpha_vantage
   - pandas
   - pydantic
   - 以及其他数据处理包
@@ -87,15 +76,20 @@
 
 1. 克隆此仓库：
    ```bash
-   git clone https://github.com/Alex2Yang97/yahoo-finance-mcp.git
-   cd yahoo-finance-mcp
+   git clone https://github.com/Alex2Yang97/alphavantage-mcp.git
+   cd alphavantage-mcp
    ```
 
 2. 创建并激活虚拟环境，安装依赖：
    ```bash
    uv venv
    source .venv/bin/activate  # Windows: .venv\Scripts\activate
-   uv pip install -e .
+ uv pip install -e .
+  ```
+
+3. 设置 Alpha Vantage API 密钥：
+   ```bash
+   export ALPHAVANTAGE_API_KEY=你的 API 密钥
    ```
 
 ## 使用方法
@@ -124,11 +118,11 @@ uv run server.py
      ```json
      {
        "mcpServers": {
-         "yfinance": {
+         "alphavantage": {
            "command": "uv",
            "args": [
              "--directory",
-             "/ABSOLUTE/PATH/TO/PARENT/FOLDER/yahoo-finance-mcp",
+             "/ABSOLUTE/PATH/TO/PARENT/FOLDER/alphavantage-mcp",
              "run",
              "server.py"
            ]
@@ -140,11 +134,11 @@ uv run server.py
      ```json
      {
        "mcpServers": {
-         "yfinance": {
+         "alphavantage": {
            "command": "uv",
            "args": [
              "--directory",
-             "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\yahoo-finance-mcp",
+             "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\alphavantage-mcp",
              "run",
              "server.py"
            ]
