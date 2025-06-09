@@ -1097,6 +1097,188 @@ async def get_price_target_info(
     return json.dumps(data)
 
 
+@fmp_server.tool(
+    name="get_crypto_list",
+    description="""获取交易所上市的加密货币列表。""",
+)
+async def get_crypto_list() -> str:
+    """获取可交易的加密货币列表"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/cryptocurrency-list"
+    try:
+        resp = requests.get(url, params={"apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting cryptocurrency list: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_crypto_quote",
+    description="""获取指定加密货币的完整行情。""",
+)
+async def get_crypto_quote(symbol: str) -> str:
+    """获取加密货币报价"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/quote"
+    try:
+        resp = requests.get(url, params={"symbol": symbol, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting crypto quote for {symbol}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_crypto_quote_short",
+    description="""获取指定加密货币的简要行情。""",
+)
+async def get_crypto_quote_short(symbol: str) -> str:
+    """获取加密货币简短报价"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/quote-short"
+    try:
+        resp = requests.get(url, params={"symbol": symbol, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting short crypto quote for {symbol}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_all_crypto_quotes",
+    description="""获取全部加密货币的批量行情。""",
+)
+async def get_all_crypto_quotes() -> str:
+    """批量获取加密货币行情"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/batch-crypto-quotes"
+    try:
+        resp = requests.get(url, params={"apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting batch crypto quotes: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_crypto_price_eod",
+    description="""获取加密货币的历史收盘价，可选简略或完整模式。""",
+)
+async def get_crypto_price_eod(symbol: str, mode: str = "light") -> str:
+    """获取加密货币 EOD 数据"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable/historical-price-eod"
+    endpoint_map = {"light": "light", "full": "full"}
+    endpoint = endpoint_map.get(mode.lower())
+    if not endpoint:
+        return "Error: invalid mode"
+
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params={"symbol": symbol, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting {mode} crypto prices for {symbol}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_crypto_intraday",
+    description="""按时间间隔获取加密货币的分时价格，支持 1min、5min 和 1hour。""",
+)
+async def get_crypto_intraday(symbol: str, interval: str = "1min") -> str:
+    """获取加密货币的分时价格"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    allowed = {"1min", "5min", "1hour"}
+    if interval not in allowed:
+        return "Error: invalid interval"
+
+    url = f"https://financialmodelingprep.com/stable/historical-chart/{interval}"
+    try:
+        resp = requests.get(url, params={"symbol": symbol, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting {interval} crypto data for {symbol}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_crypto_news",
+    description="""搜索加密货币相关新闻。""",
+)
+async def get_crypto_news(symbols: str) -> str:
+    """获取加密货币新闻"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/news/crypto"
+    try:
+        resp = requests.get(url, params={"symbols": symbols, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting crypto news for {symbols}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_crypto_latest_news",
+    description="""获取加密货币最新新闻列表。""",
+)
+async def get_crypto_latest_news(page: int = 0, limit: int = 20) -> str:
+    """获取最新加密货币新闻"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/news/crypto-latest"
+    try:
+        resp = requests.get(
+            url,
+            params={"page": page, "limit": limit, "apikey": api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting latest crypto news: {e}"
+    return json.dumps(data)
+
+
 if __name__ == "__main__":
     # Initialize and run the server
     print("Starting Financial Modeling Prep MCP server...")
