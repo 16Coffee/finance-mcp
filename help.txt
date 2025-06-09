@@ -2287,14 +2287,14 @@ Access a comprehensive list of all cryptocurrencies traded on exchanges worldwid
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/cryptocurrency-list
+financialmodelingprep#get_crypto_list
 
 Full Cryptocurrency Quote API
 Access real-time quotes for all cryptocurrencies with the FMP Full Cryptocurrency Quote API. Obtain comprehensive price data including current, high, low, and open prices.
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/quote?symbol=BTCUSD
+financialmodelingprep#get_crypto_quote {"symbol": "BTCUSD"}
 
 Parameters
 
@@ -2303,7 +2303,7 @@ Access real-time cryptocurrency quotes with the FMP Cryptocurrency Quick Quote A
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/quote-short?symbol=BTCUSD
+financialmodelingprep#get_crypto_quote_short {"symbol": "BTCUSD"}
 
 Parameters
 
@@ -2312,7 +2312,7 @@ Access live price data for a wide range of cryptocurrencies with the FMP Real-Ti
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/batch-crypto-quotes
+financialmodelingprep#get_all_crypto_quotes
 
 Parameters
 
@@ -2321,7 +2321,7 @@ Access historical end-of-day prices for a variety of cryptocurrencies with the H
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/historical-price-eod/light?symbol=BTCUSD
+financialmodelingprep#get_crypto_price_eod {"symbol": "BTCUSD", "mode": "light"}
 
 Parameters
 
@@ -2330,7 +2330,7 @@ Access comprehensive end-of-day (EOD) price data for cryptocurrencies with the F
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/historical-price-eod/full?symbol=BTCUSD
+financialmodelingprep#get_crypto_price_eod {"symbol": "BTCUSD", "mode": "full"}
 
 Parameters
 
@@ -2339,7 +2339,7 @@ Get real-time, 1-minute interval price data for cryptocurrencies with the 1-Minu
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/historical-chart/1min?symbol=BTCUSD
+financialmodelingprep#get_crypto_intraday {"symbol": "BTCUSD", "interval": "1min"}
 
 Parameters
 
@@ -2348,7 +2348,7 @@ Analyze short-term price trends with the 5-Minute Interval Cryptocurrency Data A
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/historical-chart/5min?symbol=BTCUSD
+financialmodelingprep#get_crypto_intraday {"symbol": "BTCUSD", "interval": "5min"}
 
 Parameters
 
@@ -2357,7 +2357,7 @@ Access detailed 1-hour intraday price data for cryptocurrencies with the 1-Hour 
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/historical-chart/1hour?symbol=BTCUSD
+financialmodelingprep#get_crypto_intraday {"symbol": "BTCUSD", "interval": "1hour"}
 
 Parameters
 
@@ -3571,7 +3571,7 @@ Stay informed with the latest cryptocurrency news using the FMP Crypto News API.
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/news/crypto-latest?page=0&limit=20
+financialmodelingprep#get_crypto_latest_news {"page": 0, "limit": 20}
 
 Parameters
 
@@ -3608,7 +3608,7 @@ Search for cryptocurrency news using the FMP Search Crypto News API. Retrieve ne
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/news/crypto?symbols=BTCUSD
+financialmodelingprep#get_crypto_news {"symbols": "BTCUSD"}
 
 Parameters
 
@@ -3829,7 +3829,7 @@ Access real-time cryptocurrency quotes with the FMP Full Cryptocurrency Quotes A
 
 Endpoint:
 
-https://financialmodelingprep.com/stable/batch-crypto-quotes
+financialmodelingprep#get_all_crypto_quotes
 
 Parameters
 
