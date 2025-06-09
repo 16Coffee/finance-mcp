@@ -3,10 +3,7 @@ import os
 from enum import Enum
 
 import pandas as pd
-from alpha_vantage.alphaintelligence import AlphaIntelligence
-from alpha_vantage.fundamentaldata import FundamentalData
-from alpha_vantage.options import Options
-from alpha_vantage.timeseries import TimeSeries
+import requests
 from mcp.server.fastmcp import FastMCP
 
 
@@ -21,17 +18,17 @@ class FinancialType(str, Enum):
 
 
 # Initialize FastMCP server
-alphavantage_server = FastMCP(
-    "alphavantage",
+fmp_server = FastMCP(
+    "financialmodelingprep",
     instructions="""
-# Alpha Vantage MCP Server
+# Financial Modeling Prep MCP Server
 
-This server retrieves stock market data using Alpha Vantage APIs.
-Before using these tools, set the `ALPHAVANTAGE_API_KEY` environment
-variable to your Alpha Vantage API key.
+This server retrieves stock market data using Financial Modeling Prep APIs.
+Before using these tools, set the `FMP_API_KEY` environment
+variable to your Financial Modeling Prep API key.
 
 Available.tools:
-- get_historical_stock_prices: Get historical stock prices for a given ticker symbol. Includes Date, Open, High, Low, Close, Volume, and Adjusted Close where available.
+- get_historical_stock_prices: Get historical stock prices for a given ticker symbol. Includes Date, Open, High, Low, Close, and Volume.
 - get_stock_info: Get company overview and financial metrics for a given ticker symbol.
 - get_news_sentiment: Get recent news articles for a given ticker symbol.
 - get_stock_actions: Get dividends and stock split history for a given ticker symbol.
@@ -42,9 +39,9 @@ Available.tools:
 )
 
 
-@alphavantage_server.tool(
+@fmp_server.tool(
     name="get_historical_stock_prices",
-    description="""Get historical stock prices for a given ticker symbol using Alpha Vantage. Includes Date, Open, High, Low, Close, Volume, and Adjusted Close when available.
+    description="""Get historical stock prices for a given ticker symbol using Financial Modeling Prep. Includes Date, Open, High, Low, Close and Volume.
 Args:
     ticker: str
         The ticker symbol of the stock to get historical prices for, e.g. "AAPL"
@@ -63,27 +60,31 @@ async def get_historical_stock_prices(
 ) -> str:
     """Get historical stock prices for a given ticker symbol"""
 
-    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    api_key = os.environ.get("FMP_API_KEY")
     if not api_key:
-        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+        return "Error: FMP_API_KEY environment variable not set."
 
-    ts = TimeSeries(key=api_key, output_format="pandas")
+    base = "https://financialmodelingprep.com/api/v3"
     try:
-        if interval in ["1min", "5min", "15min", "30min", "60min"]:
-            data, _ = ts.get_intraday(symbol=ticker, interval=interval, outputsize="full")
-        elif interval == "1wk":
-            data, _ = ts.get_weekly(symbol=ticker)
-        elif interval == "1mo":
-            data, _ = ts.get_monthly(symbol=ticker)
-        elif interval == "1d":
-            data, _ = ts.get_daily(symbol=ticker, outputsize="full")
+        if interval in ["1min", "5min", "15min", "30min", "1hour", "4hour"]:
+            url = f"{base}/historical-chart/{interval}/{ticker}"
+            resp = requests.get(url, params={"apikey": api_key}, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
         else:
-            return "Error: invalid interval"
+            url = f"{base}/historical-price-full/{ticker}"
+            resp = requests.get(url, params={"apikey": api_key}, timeout=10)
+            resp.raise_for_status()
+            data = resp.json().get("historical", [])
     except Exception as e:
         return f"Error: getting historical stock prices for {ticker}: {e}"
 
-    data = data.rename(columns=lambda c: c.split(". ")[-1].title())
-    data = data.reset_index(names="Date")
+    df = pd.DataFrame(data)
+    if not df.empty:
+        if "date" in df.columns:
+            df.rename(columns={"date": "Date"}, inplace=True)
+        df = df[["Date", "open", "high", "low", "close", "volume"]]
+        df.columns = [c.title() for c in df.columns]
 
     period_map = {
         "1d": pd.Timedelta(days=1),
@@ -104,15 +105,15 @@ async def get_historical_stock_prices(
     else:
         start = None
 
-    if start is not None:
-        data = data[data["Date"] >= start]
+    if start is not None and not df.empty:
+        df = df[df["Date"] >= start]
 
-    return data.to_json(orient="records", date_format="iso")
+    return df.to_json(orient="records", date_format="iso")
 
 
-@alphavantage_server.tool(
+@fmp_server.tool(
     name="get_stock_info",
-    description="""Get company overview and key metrics for a given ticker symbol using Alpha Vantage.
+    description="""Get company overview and key metrics for a given ticker symbol using Financial Modeling Prep.
 
 Args:
     ticker: str
@@ -121,21 +122,23 @@ Args:
 )
 async def get_stock_info(ticker: str) -> str:
     """Get stock information for a given ticker symbol"""
-    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    api_key = os.environ.get("FMP_API_KEY")
     if not api_key:
-        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+        return "Error: FMP_API_KEY environment variable not set."
 
-    fd = FundamentalData(key=api_key)
+    url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}"
     try:
-        data, _ = fd.get_company_overview(symbol=ticker)
+        resp = requests.get(url, params={"apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
     except Exception as e:
         return f"Error: getting stock information for {ticker}: {e}"
-    return json.dumps(data)
+    return json.dumps(data[0] if isinstance(data, list) and data else data)
 
 
-@alphavantage_server.tool(
+@fmp_server.tool(
     name="get_news_sentiment",
-    description="""Get news for a given ticker symbol using Alpha Vantage.
+    description="""Get news for a given ticker symbol using Financial Modeling Prep.
 
 Args:
     ticker: str
@@ -145,22 +148,26 @@ Args:
 async def get_news_sentiment(ticker: str) -> str:
     """Get news for a given ticker symbol"""
 
-    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    api_key = os.environ.get("FMP_API_KEY")
     if not api_key:
-        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+        return "Error: FMP_API_KEY environment variable not set."
 
-    ai = AlphaIntelligence(key=api_key)
+    url = "https://financialmodelingprep.com/api/v4/general_news"
     try:
-        data, _ = ai.get_news_sentiment(tickers=ticker)
+        resp = requests.get(
+            url, params={"tickers": ticker, "page": 0, "size": 50, "apikey": api_key}, timeout=10
+        )
+        resp.raise_for_status()
+        data = resp.json()
     except Exception as e:
         return f"Error: getting news for {ticker}: {e}"
 
     news_list = []
-    for item in data.get("feed", []):
+    for item in data:
         title = item.get("title", "")
-        summary = item.get("summary", "")
-        url = item.get("url", "")
-        news_list.append(f"Title: {title}\nSummary: {summary}\nURL: {url}")
+        summary = item.get("text", "")
+        link = item.get("url", "")
+        news_list.append(f"Title: {title}\nSummary: {summary}\nURL: {link}")
 
     if not news_list:
         return f"No news found for {ticker}"
@@ -168,9 +175,9 @@ async def get_news_sentiment(ticker: str) -> str:
     return "\n\n".join(news_list)
 
 
-@alphavantage_server.tool(
+@fmp_server.tool(
     name="get_stock_actions",
-    description="""Get stock dividends and stock splits for a given ticker symbol using Alpha Vantage.
+    description="""Get stock dividends and stock splits for a given ticker symbol using Financial Modeling Prep.
 
 Args:
     ticker: str
@@ -179,27 +186,40 @@ Args:
 )
 async def get_stock_actions(ticker: str) -> str:
     """Get stock dividends and stock splits for a given ticker symbol"""
-    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    api_key = os.environ.get("FMP_API_KEY")
     if not api_key:
-        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+        return "Error: FMP_API_KEY environment variable not set."
 
-    fd = FundamentalData(key=api_key, output_format="pandas")
+    base = "https://financialmodelingprep.com/api/v3"
     try:
-        div_df, _ = fd.get_dividends(symbol=ticker)
-        split_df, _ = fd.get_splits(symbol=ticker)
+        div_resp = requests.get(
+            f"{base}/historical-price-full/stock_dividend/{ticker}",
+            params={"apikey": api_key},
+            timeout=10,
+        )
+        div_resp.raise_for_status()
+        div_df = pd.DataFrame(div_resp.json().get("historical", []))
+        split_resp = requests.get(
+            f"{base}/historical-price-full/stock_split/{ticker}",
+            params={"apikey": api_key},
+            timeout=10,
+        )
+        split_resp.raise_for_status()
+        split_df = pd.DataFrame(split_resp.json().get("historical", []))
     except Exception as e:
         return f"Error: getting stock actions for {ticker}: {e}"
 
-    div_df = div_df.reset_index(names="date")
-    split_df = split_df.reset_index(names="date")
     return json.dumps(
-        {"dividends": div_df.to_dict("records"), "splits": split_df.to_dict("records")}
+        {
+            "dividends": div_df.to_dict("records"),
+            "splits": split_df.to_dict("records"),
+        }
     )
 
 
-@alphavantage_server.tool(
+@fmp_server.tool(
     name="get_financial_statement",
-    description="""Get financial statement for a given ticker symbol using Alpha Vantage. Supported types: income_stmt_annual, income_stmt_quarterly, balance_sheet_annual, balance_sheet_quarterly, cashflow_annual, cashflow_quarterly.
+    description="""Get financial statement for a given ticker symbol using Financial Modeling Prep. Supported types: income_stmt_annual, income_stmt_quarterly, balance_sheet_annual, balance_sheet_quarterly, cashflow_annual, cashflow_quarterly.
 
 Args:
     ticker: str
@@ -211,35 +231,44 @@ Args:
 async def get_financial_statement(ticker: str, financial_type: str) -> str:
     """Get financial statement for a given ticker symbol"""
 
-    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    api_key = os.environ.get("FMP_API_KEY")
     if not api_key:
-        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+        return "Error: FMP_API_KEY environment variable not set."
 
-    fd = FundamentalData(key=api_key)
+    base = "https://financialmodelingprep.com/api/v3"
+    period = "annual"
+    if financial_type in [
+        FinancialType.income_stmt_quarterly,
+        FinancialType.balance_sheet_quarterly,
+        FinancialType.cashflow_quarterly,
+    ]:
+        period = "quarter"
+
+    endpoint_map = {
+        FinancialType.income_stmt_annual: "income-statement",
+        FinancialType.income_stmt_quarterly: "income-statement",
+        FinancialType.balance_sheet_annual: "balance-sheet-statement",
+        FinancialType.balance_sheet_quarterly: "balance-sheet-statement",
+        FinancialType.cashflow_annual: "cash-flow-statement",
+        FinancialType.cashflow_quarterly: "cash-flow-statement",
+    }
+    endpoint = endpoint_map.get(FinancialType(financial_type))
+    if not endpoint:
+        return "Error: invalid financial type"
+    url = f"{base}/{endpoint}/{ticker}"
     try:
-        if financial_type == FinancialType.income_stmt_annual:
-            data, _ = fd.get_income_statement_annual(symbol=ticker)
-        elif financial_type == FinancialType.income_stmt_quarterly:
-            data, _ = fd.get_income_statement_quarterly(symbol=ticker)
-        elif financial_type == FinancialType.balance_sheet_annual:
-            data, _ = fd.get_balance_sheet_annual(symbol=ticker)
-        elif financial_type == FinancialType.balance_sheet_quarterly:
-            data, _ = fd.get_balance_sheet_quarterly(symbol=ticker)
-        elif financial_type == FinancialType.cashflow_annual:
-            data, _ = fd.get_cash_flow_annual(symbol=ticker)
-        elif financial_type == FinancialType.cashflow_quarterly:
-            data, _ = fd.get_cash_flow_quarterly(symbol=ticker)
-        else:
-            return "Error: invalid financial type"
+        resp = requests.get(url, params={"period": period, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
     except Exception as e:
         return f"Error: getting financial statement for {ticker}: {e}"
 
     return json.dumps(data)
 
 
-@alphavantage_server.tool(
+@fmp_server.tool(
     name="get_option_expiration_dates",
-    description="""Fetch the available options expiration dates for a given ticker symbol using Alpha Vantage.
+    description="""Fetch the available options expiration dates for a given ticker symbol using Financial Modeling Prep.
 
 Args:
     ticker: str
@@ -249,26 +278,26 @@ Args:
 async def get_option_expiration_dates(ticker: str) -> str:
     """Fetch the available options expiration dates for a given ticker symbol."""
 
-    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    api_key = os.environ.get("FMP_API_KEY")
     if not api_key:
-        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+        return "Error: FMP_API_KEY environment variable not set."
 
-    opt = Options(key=api_key)
+    base = "https://financialmodelingprep.com/api/v3"
     try:
-        data, _ = opt.get_realtime_options(symbol=ticker)
+        resp = requests.get(
+            f"{base}/options/available-expirations/{ticker}", params={"apikey": api_key}, timeout=10
+        )
+        resp.raise_for_status()
+        data = resp.json()
     except Exception as e:
         return f"Error: getting option expiration dates for {ticker}: {e}"
-
-    if isinstance(data, pd.DataFrame):
-        expirations = data["expiration"].dropna().astype(str).unique().tolist()
-    else:
-        expirations = {item.get("expiration") for item in data if item.get("expiration")}
+    expirations = data if isinstance(data, list) else data.get("expirations", [])
     return json.dumps(sorted(expirations))
 
 
-@alphavantage_server.tool(
+@fmp_server.tool(
     name="get_option_chain",
-    description="""Fetch the option chain for a given ticker symbol, expiration date, and option type using Alpha Vantage.
+    description="""Fetch the option chain for a given ticker symbol, expiration date, and option type using Financial Modeling Prep.
 
 Args:
     ticker: str
@@ -282,33 +311,32 @@ Args:
 async def get_option_chain(ticker: str, expiration_date: str, option_type: str) -> str:
     """Fetch the option chain for a given ticker symbol, expiration date, and option type."""
 
-    api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+    api_key = os.environ.get("FMP_API_KEY")
     if not api_key:
-        return "Error: ALPHAVANTAGE_API_KEY environment variable not set."
+        return "Error: FMP_API_KEY environment variable not set."
 
-    opt = Options(key=api_key)
+    base = "https://financialmodelingprep.com/api/v3"
     try:
-        data, _ = opt.get_realtime_options(symbol=ticker)
+        resp = requests.get(
+            f"{base}/options/chain/{ticker}",
+            params={"expiration": expiration_date, "apikey": api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
     except Exception as e:
         return f"Error: getting option chain for {ticker}: {e}"
-
-    if isinstance(data, pd.DataFrame):
-        filtered = data[
-            (data["expiration"] == expiration_date)
-            & (data["type"].str.lower() == option_type.lower())
-        ]
-        return filtered.to_json(orient="records", date_format="iso")
 
     filtered = [
         item
         for item in data
-        if item.get("expiration") == expiration_date
-        and item.get("type", "").lower() == option_type.lower()
+        if item.get("expirationDate") == expiration_date
+        and item.get("optionType", "").lower() == option_type.lower()
     ]
     return json.dumps(filtered)
 
 
 if __name__ == "__main__":
     # Initialize and run the server
-    print("Starting Alpha Vantage MCP server...")
-    alphavantage_server.run(transport="stdio")
+    print("Starting Financial Modeling Prep MCP server...")
+    fmp_server.run(transport="stdio")

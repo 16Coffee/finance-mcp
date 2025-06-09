@@ -1,12 +1,12 @@
-# Alpha Vantage MCP 服务器
+# Financial Modeling Prep MCP 服务器
 
 <div align="right">
   <a href="README.md">English</a> | <a href="README.zh.md">中文</a>
 </div>
 
-这是一个基于模型上下文协议（MCP）的服务器，提供来自 Alpha Vantage 的全面金融数据。它允许您获取股票的详细信息，包括历史价格、公司信息、财务报表、期权数据和市场新闻。
+这是一个基于模型上下文协议（MCP）的服务器，提供来自 Financial Modeling Prep 的全面金融数据。它允许您获取股票的详细信息，包括历史价格、公司信息、财务报表、期权数据和市场新闻。
 
-[![smithery badge](https://smithery.ai/badge/@Alex2Yang97/alphavantage-mcp)](https://smithery.ai/server/@Alex2Yang97/alphavantage-mcp)
+[![smithery badge](https://smithery.ai/badge/@Alex2Yang97/financialmodelingprep-mcp)](https://smithery.ai/server/@Alex2Yang97/financialmodelingprep-mcp)
 
 ## 演示
 
@@ -29,7 +29,7 @@
 
 | 工具 | 描述 |
 |------|-------------|
-| `get_financial_statement` | 使用 Alpha Vantage 获取利润表、资产负债表或现金流量表（年度/季度） |
+| `get_financial_statement` | 使用 Financial Modeling Prep 获取利润表、资产负债表或现金流量表（年度/季度） |
 
 ### 期权数据
 
@@ -67,7 +67,7 @@
 - Python 3.11 或更高版本
 - `pyproject.toml` 中列出的依赖项，包括：
   - mcp
-  - alpha_vantage
+  - requests
   - pandas
   - pydantic
   - 以及其他数据处理包
@@ -76,8 +76,8 @@
 
 1. 克隆此仓库：
    ```bash
-   git clone https://github.com/Alex2Yang97/alphavantage-mcp.git
-   cd alphavantage-mcp
+   git clone https://github.com/Alex2Yang97/financialmodelingprep-mcp.git
+   cd financialmodelingprep-mcp
    ```
 
 2. 创建并激活虚拟环境，安装依赖：
@@ -87,9 +87,9 @@
  uv pip install -e .
   ```
 
-3. 设置 Alpha Vantage API 密钥：
+3. 设置 Financial Modeling Prep API 密钥：
    ```bash
-   export ALPHAVANTAGE_API_KEY=你的 API 密钥
+   export FMP_API_KEY=你的 API 密钥
    ```
 
 ## 使用方法
@@ -118,11 +118,11 @@ uv run server.py
      ```json
      {
        "mcpServers": {
-         "alphavantage": {
+         "financialmodelingprep": {
            "command": "uv",
            "args": [
              "--directory",
-             "/ABSOLUTE/PATH/TO/PARENT/FOLDER/alphavantage-mcp",
+             "/ABSOLUTE/PATH/TO/PARENT/FOLDER/financialmodelingprep-mcp",
              "run",
              "server.py"
            ]
@@ -134,11 +134,11 @@ uv run server.py
      ```json
      {
        "mcpServers": {
-         "alphavantage": {
+         "financialmodelingprep": {
            "command": "uv",
            "args": [
              "--directory",
-             "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\alphavantage-mcp",
+             "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\financialmodelingprep-mcp",
              "run",
              "server.py"
            ]

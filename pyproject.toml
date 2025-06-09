@@ -1,12 +1,12 @@
 [project]
-name = "alphavantage-mcp"
+name = "financialmodelingprep-mcp"
 version = "0.1.0"
-description = "MCP server implementation for Alpha Vantage integration"
+description = "MCP server implementation for Financial Modeling Prep integration"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "mcp[cli]>=1.6.0",
-    "alpha_vantage>=3.0.0",
+    "requests>=2.31.0",
     "pandas>=2.2.0",
 ]
 

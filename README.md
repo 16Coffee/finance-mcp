@@ -1,14 +1,14 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/alex2yang97-alphavantage-mcp-badge.png)](https://mseep.ai/app/alex2yang97-alphavantage-mcp)
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/alex2yang97-financialmodelingprep-mcp-badge.png)](https://mseep.ai/app/alex2yang97-financialmodelingprep-mcp)
 
-# Alpha Vantage MCP Server
+# Financial Modeling Prep MCP Server
 
 <div align="right">
   <a href="README.md">English</a> | <a href="README.zh.md">中文</a>
 </div>
 
-This is a Model Context Protocol (MCP) server that provides comprehensive financial data from Alpha Vantage. It allows you to retrieve detailed information about stocks, including historical prices, company information, financial statements, options data, and market news.
+This is a Model Context Protocol (MCP) server that provides comprehensive financial data from Financial Modeling Prep. It allows you to retrieve detailed information about stocks, including historical prices, company information, financial statements, options data, and market news.
 
-[![smithery badge](https://smithery.ai/badge/@Alex2Yang97/alphavantage-mcp)](https://smithery.ai/server/@Alex2Yang97/alphavantage-mcp)
+[![smithery badge](https://smithery.ai/badge/@Alex2Yang97/financialmodelingprep-mcp)](https://smithery.ai/server/@Alex2Yang97/financialmodelingprep-mcp)
 
 ## Demo
 
@@ -31,7 +31,7 @@ The server exposes the following tools through the Model Context Protocol:
 
 | Tool | Description |
 |------|-------------|
-| `get_financial_statement` | Get income statement, balance sheet, or cash flow statement (annual/quarterly) using Alpha Vantage |
+| `get_financial_statement` | Get income statement, balance sheet, or cash flow statement (annual/quarterly) using Financial Modeling Prep |
 
 ### Options Data
 
@@ -69,7 +69,7 @@ With this MCP server, you can use Claude to:
 - Python 3.11 or higher
 - Dependencies as listed in `pyproject.toml`, including:
   - mcp
-  - alpha_vantage
+  - requests
   - pandas
   - pydantic
   - and other packages for data processing
@@ -78,8 +78,8 @@ With this MCP server, you can use Claude to:
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/Alex2Yang97/alphavantage-mcp.git
-   cd alphavantage-mcp
+   git clone https://github.com/Alex2Yang97/financialmodelingprep-mcp.git
+   cd financialmodelingprep-mcp
    ```
 
 2. Create and activate a virtual environment and install dependencies:
@@ -89,9 +89,9 @@ With this MCP server, you can use Claude to:
    uv pip install -e .
    ```
 
-3. Set your Alpha Vantage API key:
+3. Set your Financial Modeling Prep API key:
    ```bash
-   export ALPHAVANTAGE_API_KEY=YOUR_API_KEY
+   export FMP_API_KEY=YOUR_API_KEY
    ```
 
 ## Usage
@@ -120,11 +120,11 @@ To integrate this server with Claude for Desktop:
      ```json
      {
        "mcpServers": {
-         "alphavantage": {
+         "financialmodelingprep": {
            "command": "uv",
            "args": [
              "--directory",
-             "/ABSOLUTE/PATH/TO/PARENT/FOLDER/alphavantage-mcp",
+             "/ABSOLUTE/PATH/TO/PARENT/FOLDER/financialmodelingprep-mcp",
              "run",
              "server.py"
            ]
@@ -136,11 +136,11 @@ To integrate this server with Claude for Desktop:
      ```json
      {
        "mcpServers": {
-         "alphavantage": {
+         "financialmodelingprep": {
            "command": "uv",
            "args": [
              "--directory",
-             "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\alphavantage-mcp",
+             "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\financialmodelingprep-mcp",
              "run",
              "server.py"
            ]
