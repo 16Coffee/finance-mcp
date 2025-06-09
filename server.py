@@ -1,5 +1,8 @@
 import json
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from enum import Enum
 
 import pandas as pd
