@@ -85,6 +85,8 @@ async def get_historical_stock_prices(
             df.rename(columns={"date": "Date"}, inplace=True)
         df = df[["Date", "open", "high", "low", "close", "volume"]]
         df.columns = [c.title() for c in df.columns]
+        # Convert the Date column to datetime for proper comparison
+        df["Date"] = pd.to_datetime(df["Date"])
 
     period_map = {
         "1d": pd.Timedelta(days=1),
