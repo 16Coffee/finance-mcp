@@ -1,6 +1,8 @@
 import json
 import os
+
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from enum import Enum
@@ -40,6 +42,11 @@ fmp_server = FastMCP(
 - search_companies：根据关键字搜索公司。
 - get_top_gainers：获取今日涨幅榜。
 - get_top_losers：获取今日跌幅榜。
+- get_stock_grades：获取分析师最新评级。
+- get_stock_grades_historical：获取分析师评级历史记录。
+- get_stock_grades_summary：获取分析师评级汇总。
+- get_stock_grade_news：获取指定股票的评级新闻。
+- get_stock_grade_latest_news：获取最新评级新闻。
 """,
 )
 
@@ -272,6 +279,305 @@ async def get_financial_statement(ticker: str, financial_type: str) -> str:
 
 
 @fmp_server.tool(
+    name="get_calendar_data",
+    description="""获取分红、收益、IPO、拆股等日历信息。
+
+参数说明：
+    event_type: str
+        可选值：dividends、dividends_calendar、earnings、earnings_calendar、
+        ipos_calendar、ipos_disclosure、ipos_prospectus、splits、splits_calendar
+    symbol: str
+        部分类型需要股票代码
+    page: int
+        页码，默认 0
+    limit: int
+        返回数量，默认 100""",
+)
+async def get_calendar_data(
+    event_type: str,
+    symbol: str = "",
+    page: int = 0,
+    limit: int = 100,
+) -> str:
+    """根据事件类型获取相关日历数据"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "dividends": "dividends",
+        "dividends_calendar": "dividends-calendar",
+        "earnings": "earnings",
+        "earnings_calendar": "earnings-calendar",
+        "ipos_calendar": "ipos-calendar",
+        "ipos_disclosure": "ipos-disclosure",
+        "ipos_prospectus": "ipos-prospectus",
+        "splits": "splits",
+        "splits_calendar": "splits-calendar",
+    }
+    endpoint = endpoint_map.get(event_type.lower())
+    if not endpoint:
+        return "Error: invalid event type"
+
+    params = {"apikey": api_key}
+    if event_type in ["dividends", "earnings", "splits"] and not symbol:
+        return "Error: symbol is required for this event type"
+    if symbol:
+        params["symbol"] = symbol
+    if event_type in ["ipos_calendar", "ipos_disclosure", "ipos_prospectus"]:
+        params.update({"page": page, "limit": limit})
+
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting calendar data {event_type}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_shares_float_info",
+    description="""获取流通股数据或全部公司流通股列表。
+
+参数说明：
+    info_type: str
+        single 或 all
+    symbol: str
+        查询单个公司时必填
+    page: int
+        列表分页，默认 0
+    limit: int
+        返回数量，默认 1000""",
+)
+async def get_shares_float_info(
+    info_type: str,
+    symbol: str = "",
+    page: int = 0,
+    limit: int = 1000,
+) -> str:
+    """获取流通股信息"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "single": "shares-float",
+        "all": "shares-float-all",
+    }
+    endpoint = endpoint_map.get(info_type.lower())
+    if not endpoint:
+        return "Error: invalid info type"
+
+    params = {"apikey": api_key}
+    if info_type == "single":
+        if not symbol:
+            return "Error: symbol is required for single type"
+        params["symbol"] = symbol
+    else:
+        params.update({"page": page, "limit": limit})
+
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting shares float info {info_type}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_ma_data",
+    description="""获取并购相关数据。
+
+参数说明：
+    action_type: str
+        latest 或 search
+    name: str
+        搜索模式下的公司名称
+    page: int
+        页码，默认 0
+    limit: int
+        返回数量，默认 100""",
+)
+async def get_ma_data(
+    action_type: str,
+    name: str = "",
+    page: int = 0,
+    limit: int = 100,
+) -> str:
+    """获取并购信息"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "latest": "mergers-acquisitions-latest",
+        "search": "mergers-acquisitions-search",
+    }
+    endpoint = endpoint_map.get(action_type.lower())
+    if not endpoint:
+        return "Error: invalid action type"
+
+    params = {"apikey": api_key, "page": page, "limit": limit}
+    if action_type == "search":
+        if not name:
+            return "Error: name is required for search"
+        params["name"] = name
+
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting M&A data {action_type}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_executive_info",
+    description="""获取公司高管信息或薪酬数据。
+
+参数说明：
+    info_type: str
+        executives、compensation 或 benchmark
+    symbol: str
+        当类型为 executives 或 compensation 时必填""",
+)
+async def get_executive_info(info_type: str, symbol: str = "") -> str:
+    """获取公司高管或薪酬相关数据"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "executives": "key-executives",
+        "compensation": "governance-executive-compensation",
+        "benchmark": "executive-compensation-benchmark",
+    }
+    endpoint = endpoint_map.get(info_type.lower())
+    if not endpoint:
+        return "Error: invalid info type"
+
+    params = {"apikey": api_key}
+    if info_type in ["executives", "compensation"]:
+        if not symbol:
+            return "Error: symbol is required for this info type"
+        params["symbol"] = symbol
+
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting executive info {info_type} for {symbol}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_dcf_valuation",
+    description="""获取 DCF 或杠杆 DCF 估值数据。
+
+参数说明：
+    valuation_type: str
+        dcf 或 levered
+    symbol: str
+        股票代码""",
+)
+async def get_dcf_valuation(valuation_type: str, symbol: str) -> str:
+    """根据类型获取 DCF 估值"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "dcf": "discounted-cash-flow",
+        "levered": "levered-discounted-cash-flow",
+    }
+    endpoint = endpoint_map.get(valuation_type.lower())
+    if not endpoint:
+        return "Error: invalid valuation type"
+
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params={"symbol": symbol, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting {valuation_type} DCF for {symbol}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_economic_data",
+    description="""获取宏观经济数据。
+
+参数说明：
+    data_type: str
+        treasury_rates、economic_indicators、economic_calendar、market_risk_premium
+    name: str
+        经济指标名称，data_type 为 economic_indicators 时必填
+    from_date: str
+        起始日期，格式 YYYY-MM-DD
+    to_date: str
+        结束日期，格式 YYYY-MM-DD""",
+)
+async def get_economic_data(
+    data_type: str,
+    name: str = "",
+    from_date: str = "",
+    to_date: str = "",
+) -> str:
+    """根据类型获取经济数据"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "treasury_rates": "treasury-rates",
+        "economic_indicators": "economic-indicators",
+        "economic_calendar": "economic-calendar",
+        "market_risk_premium": "market-risk-premium",
+    }
+    endpoint = endpoint_map.get(data_type.lower())
+    if not endpoint:
+        return "Error: invalid data type"
+
+    params = {"apikey": api_key}
+    if data_type == "economic_indicators":
+        if not name:
+            return "Error: name is required for economic_indicators"
+        params["name"] = name
+    if from_date and to_date:
+        params.update({"from": from_date, "to": to_date})
+
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting economic data {data_type}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
     name="get_option_expiration_dates",
     description="""获取指定股票可用的期权到期日。
 
@@ -414,6 +720,380 @@ async def get_top_losers() -> str:
         data = resp.json()
     except Exception as e:
         return f"Error: getting top losers: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_stock_grades",
+    description="""获取分析师最新评级。
+
+参数说明：
+    ticker: str
+        股票代码，例如 "AAPL""",
+)
+async def get_stock_grades(ticker: str) -> str:
+    """获取指定股票的分析师最新评级"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/grades"
+    try:
+        resp = requests.get(url, params={"symbol": ticker, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting stock grades for {ticker}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_stock_grades_historical",
+    description="""获取分析师评级历史记录。
+
+参数说明：
+    ticker: str
+        股票代码，例如 "AAPL"
+    limit: int
+        返回记录数量，最大 1000，默认 100""",
+)
+async def get_stock_grades_historical(ticker: str, limit: int = 100) -> str:
+    """获取分析师评级历史数据"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/grades-historical"
+    try:
+        resp = requests.get(
+            url,
+            params={"symbol": ticker, "limit": limit, "apikey": api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting historical grades for {ticker}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_stock_grades_summary",
+    description="""获取分析师评级汇总。
+
+参数说明：
+    ticker: str
+        股票代码，例如 "AAPL""",
+)
+async def get_stock_grades_summary(ticker: str) -> str:
+    """获取分析师评级汇总数据"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/grades-consensus"
+    try:
+        resp = requests.get(url, params={"symbol": ticker, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting grades summary for {ticker}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_stock_grade_news",
+    description="""获取指定股票的评级新闻。
+
+参数说明：
+    ticker: str
+        股票代码，例如 "AAPL"
+    page: int
+        页码，默认 0
+    limit: int
+        每页数量，最大 100，默认 1""",
+)
+async def get_stock_grade_news(ticker: str, page: int = 0, limit: int = 1) -> str:
+    """获取分析师评级相关新闻"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/grades-news"
+    try:
+        resp = requests.get(
+            url,
+            params={
+                "symbol": ticker,
+                "page": page,
+                "limit": limit,
+                "apikey": api_key,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting grade news for {ticker}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_stock_grade_latest_news",
+    description="""获取最新评级新闻。
+
+参数说明：
+    page: int
+        页码，默认 0
+    limit: int
+        每页数量，最大 1000，默认 10""",
+)
+async def get_stock_grade_latest_news(page: int = 0, limit: int = 10) -> str:
+    """获取所有股票的最新评级新闻"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/grades-latest-news"
+    try:
+        resp = requests.get(
+            url,
+            params={"page": page, "limit": limit, "apikey": api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting latest grade news: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="lookup_identifier",
+    description="""按标识类型查询股票代码、CIK、CUSIP 或 ISIN。
+
+参数说明：
+    identifier_type: str
+        可选值：symbol、name、cik、cusip、isin、exchange_variant
+    query: str
+        对应的查询内容""",
+)
+async def lookup_identifier(identifier_type: str, query: str) -> str:
+    """根据不同标识类型搜索证券信息"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "symbol": ("search-symbol", "query"),
+        "name": ("search-name", "query"),
+        "cik": ("search-cik", "cik"),
+        "cusip": ("search-cusip", "cusip"),
+        "isin": ("search-isin", "isin"),
+        "exchange_variant": ("search-exchange-variants", "symbol"),
+    }
+    ep = endpoint_map.get(identifier_type.lower())
+    if not ep:
+        return "Error: invalid identifier type"
+
+    endpoint, param_name = ep
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params={param_name: query, "apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: lookup failed for {query}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_directory_list",
+    description="""获取市场或公司目录列表。
+
+参数说明：
+    list_type: str
+        可选值：stock、financial_statement_symbol、cik、symbol_change、etf、
+        actively_trading、earnings_transcript、available_exchanges、
+        available_sectors、available_industries、available_countries""",
+)
+async def get_directory_list(list_type: str) -> str:
+    """根据目录类型获取对应列表数据"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "stock": "stock-list",
+        "financial_statement_symbol": "financial-statement-symbol-list",
+        "cik": "cik-list",
+        "symbol_change": "symbol-change",
+        "etf": "etf-list",
+        "actively_trading": "actively-trading-list",
+        "earnings_transcript": "earnings-transcript-list",
+        "available_exchanges": "available-exchanges",
+        "available_sectors": "available-sectors",
+        "available_industries": "available-industries",
+        "available_countries": "available-countries",
+    }
+    endpoint = endpoint_map.get(list_type.lower())
+    if not endpoint:
+        return "Error: invalid list type"
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params={"apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting directory list for {list_type}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_analyst_estimates",
+    description="""获取分析师的财务预估数据。
+
+参数说明：
+    symbol: str
+        股票代码，例如 "AAPL"
+    period: str
+        annual 或 quarter，默认 annual
+    page: int
+        页码，默认 0
+    limit: int
+        返回数量，默认 10""",
+)
+async def get_analyst_estimates(
+    symbol: str, period: str = "annual", page: int = 0, limit: int = 10
+) -> str:
+    """获取分析师预估指标"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/stable/analyst-estimates"
+    try:
+        resp = requests.get(
+            url,
+            params={
+                "symbol": symbol,
+                "period": period,
+                "page": page,
+                "limit": limit,
+                "apikey": api_key,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting analyst estimates for {symbol}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_ratings",
+    description="""获取股票评级数据，可选择快照或历史记录。
+
+参数说明：
+    symbol: str
+        股票代码，例如 "AAPL"
+    rating_type: str
+        snapshot 或 historical，默认 snapshot
+    limit: int
+        返回数量，默认 1""",
+)
+async def get_ratings(symbol: str, rating_type: str = "snapshot", limit: int = 1) -> str:
+    """根据类型获取评级信息"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "snapshot": "ratings-snapshot",
+        "historical": "ratings-historical",
+    }
+    endpoint = endpoint_map.get(rating_type.lower())
+    if not endpoint:
+        return "Error: invalid rating type"
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(
+            url,
+            params={"symbol": symbol, "limit": limit, "apikey": api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting {rating_type} ratings for {symbol}: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_price_target_info",
+    description="""获取分析师目标价相关信息，可选择汇总、共识或新闻。
+
+参数说明：
+    info_type: str
+        summary、consensus、news、latest_news
+    symbol: str
+        股票代码，news/summary/consensus 必填
+    page: int
+        页码，默认 0
+    limit: int
+        返回数量，默认 10""",
+)
+async def get_price_target_info(
+    info_type: str,
+    symbol: str = "",
+    page: int = 0,
+    limit: int = 10,
+) -> str:
+    """获取价格目标汇总、共识或相关新闻"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    endpoint_map = {
+        "summary": "price-target-summary",
+        "consensus": "price-target-consensus",
+        "news": "price-target-news",
+        "latest_news": "price-target-latest-news",
+    }
+    endpoint = endpoint_map.get(info_type.lower())
+    if not endpoint:
+        return "Error: invalid info type"
+
+    params = {"apikey": api_key}
+    if info_type in ["summary", "consensus", "news"]:
+        if not symbol:
+            return "Error: symbol is required for this info type"
+        params["symbol"] = symbol
+    if info_type in ["news", "latest_news"]:
+        params.update({"page": page, "limit": limit})
+
+    url = f"{base}/{endpoint}"
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting price target info {info_type} for {symbol}: {e}"
     return json.dumps(data)
 
 

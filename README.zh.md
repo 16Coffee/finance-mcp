@@ -38,6 +38,37 @@
 | `get_option_expiration_dates` | 获取可用的期权到期日期 |
 | `get_option_chain` | 获取特定到期日期和类型（看涨/看跌）的期权链 |
 
+### 分析师评级
+
+| 工具 | 描述 |
+|------|-------------|
+| `get_stock_grades` | 获取股票的最新分析师评级 |
+| `get_stock_grades_historical` | 获取分析师评级历史记录 |
+| `get_stock_grades_summary` | 获取分析师评级汇总信息 |
+| `get_stock_grade_news` | 获取该股票相关的评级新闻 |
+| `get_stock_grade_latest_news` | 获取最新的分析师评级新闻 |
+| `get_analyst_estimates` | 获取分析师财务预估 |
+| `get_ratings` | 获取评级快照或历史数据 |
+| `get_price_target_info` | 获取目标价汇总、共识或相关新闻 |
+
+### 参考数据
+
+| 工具 | 描述 |
+|------|-------------|
+| `lookup_identifier` | 按股票代码、名称、CIK、CUSIP 或 ISIN 查询 |
+| `get_directory_list` | 获取交易所、行业等目录列表 |
+
+### 公司事件
+
+| 工具 | 描述 |
+|------|-------------|
+| `get_calendar_data` | 获取分红、收益、IPO、拆股等日历信息 |
+| `get_shares_float_info` | 获取单家公司或全部公司的流通股数据 |
+| `get_ma_data` | 获取最新并购交易或按名称搜索 |
+| `get_executive_info` | 获取公司高管或薪酬信息 |
+| `get_dcf_valuation` | 获取 DCF 或杠杆 DCF 估值 |
+| `get_economic_data` | 获取国债利率等宏观经济数据 |
+
 ## 实际应用场景
 
 使用此 MCP 服务器，您可以利用 Claude 进行：

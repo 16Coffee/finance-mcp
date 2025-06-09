@@ -40,6 +40,37 @@ The server exposes the following tools through the Model Context Protocol:
 | `get_option_expiration_dates` | Get available options expiration dates |
 | `get_option_chain` | Get options chain for a specific expiration date and type (calls/puts) |
 
+### Stock Grades
+
+| Tool | Description |
+|------|-------------|
+| `get_stock_grades` | Get the latest analyst grades for a stock |
+| `get_stock_grades_historical` | Get historical analyst grades |
+| `get_stock_grades_summary` | Get a consensus summary of analyst grades |
+| `get_stock_grade_news` | Get grade-related news for a stock |
+| `get_stock_grade_latest_news` | Get the most recent analyst grade news |
+| `get_analyst_estimates` | Retrieve analyst financial estimates |
+| `get_ratings` | Get ratings snapshot or history |
+| `get_price_target_info` | Get price target summary, consensus or news |
+
+### Reference Data
+
+| Tool | Description |
+|------|-------------|
+| `lookup_identifier` | Search by symbol, name, CIK, CUSIP or ISIN |
+| `get_directory_list` | Retrieve exchange, sector and other lists |
+
+### Corporate Events
+
+| Tool | Description |
+|------|-------------|
+| `get_calendar_data` | Get dividends, earnings, IPO and split calendars |
+| `get_shares_float_info` | Retrieve float data for one or all companies |
+| `get_ma_data` | Get latest or search M&A transactions |
+| `get_executive_info` | Fetch company executives or compensation info |
+| `get_dcf_valuation` | Obtain DCF or levered DCF valuation |
+| `get_economic_data` | Retrieve treasury rates and other macro data |
+
 ## Real-World Use Cases
 
 With this MCP server, you can use Claude to:
