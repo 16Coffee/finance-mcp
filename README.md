@@ -71,6 +71,19 @@ The server exposes the following tools through the Model Context Protocol:
 | `get_dcf_valuation` | Obtain DCF or levered DCF valuation |
 | `get_economic_data` | Retrieve treasury rates and other macro data |
 
+### Cryptocurrency Data
+
+| Tool | Description |
+|------|-------------|
+| `get_crypto_list` | Retrieve the list of tradable cryptocurrencies |
+| `get_crypto_quote` | Get complete quote data for a cryptocurrency |
+| `get_crypto_quote_short` | Get quick quote data for a cryptocurrency |
+| `get_all_crypto_quotes` | Get real-time quotes for all cryptocurrencies |
+| `get_crypto_price_eod` | Get historical cryptocurrency EOD prices in light or full mode |
+| `get_crypto_intraday` | Get intraday cryptocurrency data by 1min, 5min or 1hour interval |
+| `get_crypto_news` | Search cryptocurrency-related news |
+| `get_crypto_latest_news` | Retrieve the latest cryptocurrency news |
+
 ## Real-World Use Cases
 
 With this MCP server, you can use Claude to:
