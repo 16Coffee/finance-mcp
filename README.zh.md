@@ -69,6 +69,19 @@
 | `get_dcf_valuation` | 获取 DCF 或杠杆 DCF 估值 |
 | `get_economic_data` | 获取国债利率等宏观经济数据 |
 
+### 加密货币数据
+
+| 工具 | 描述 |
+|------|------|
+| `get_crypto_list` | 获取可交易的加密货币列表 |
+| `get_crypto_quote` | 获取加密货币完整行情 |
+| `get_crypto_quote_short` | 获取加密货币简要行情 |
+| `get_all_crypto_quotes` | 获取所有加密货币的实时行情 |
+| `get_crypto_price_eod` | 获取加密货币历史收盘价，可选简略或完整模式 |
+| `get_crypto_intraday` | 以 1min、5min 或 1hour 间隔获取加密货币分时数据 |
+| `get_crypto_news` | 搜索加密货币相关新闻 |
+| `get_crypto_latest_news` | 获取最新的加密货币新闻 |
+
 ## 实际应用场景
 
 使用此 MCP 服务器，您可以利用 Claude 进行：
