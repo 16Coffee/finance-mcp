@@ -1,6 +1,8 @@
 import json
 import os
+
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from enum import Enum
@@ -42,6 +44,29 @@ fmp_server = FastMCP(
 - get_top_losers：获取今日跌幅榜。
 """,
 )
+
+
+def _call_fmp_api(endpoint: str, params: dict) -> str:
+    """Helper to call FMP API endpoints"""
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    base = "https://financialmodelingprep.com/stable"
+    try:
+        resp = requests.get(
+            f"{base}/{endpoint}",
+            params={**params, "apikey": api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+    except Exception as e:
+        return f"Error: calling {endpoint}: {e}"
+
+    try:
+        return json.dumps(resp.json())
+    except Exception:
+        return resp.text
 
 
 @fmp_server.tool(
@@ -415,6 +440,224 @@ async def get_top_losers() -> str:
     except Exception as e:
         return f"Error: getting top losers: {e}"
     return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="search_financial_data",
+    description="""根据不同类型的条件搜索金融数据，可选类型：symbol、name、cik、cusip、isin、exchange_variants。params 为额外查询参数的 JSON 字符串。""",
+)
+async def search_financial_data(search_type: str, params: str = "") -> str:
+    mapping = {
+        "symbol": "search-symbol",
+        "name": "search-name",
+        "cik": "search-cik",
+        "cusip": "search-cusip",
+        "isin": "search-isin",
+        "exchange_variants": "search-exchange-variants",
+    }
+    endpoint = mapping.get(search_type)
+    if not endpoint:
+        return "Error: invalid search_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="list_directory_data",
+    description="""获取目录类数据，类型包括：stock_list、financial_statement_symbol_list、cik_list、symbol_change、etf_list、actively_trading_list、earnings_transcript_list、available_exchanges、available_sectors、available_industries、available_countries。params 为额外查询参数的 JSON 字符串。""",
+)
+async def list_directory_data(list_type: str, params: str = "") -> str:
+    mapping = {
+        "stock_list": "stock-list",
+        "financial_statement_symbol_list": "financial-statement-symbol-list",
+        "cik_list": "cik-list",
+        "symbol_change": "symbol-change",
+        "etf_list": "etf-list",
+        "actively_trading_list": "actively-trading-list",
+        "earnings_transcript_list": "earnings-transcript-list",
+        "available_exchanges": "available-exchanges",
+        "available_sectors": "available-sectors",
+        "available_industries": "available-industries",
+        "available_countries": "available-countries",
+    }
+    endpoint = mapping.get(list_type)
+    if not endpoint:
+        return "Error: invalid list_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="analyst_data",
+    description="""获取分析师相关数据，类型包括：financial_estimates、ratings_snapshot、ratings_historical、price_target_summary、price_target_consensus、price_target_news、price_target_latest_news、grades、grades_historical、grades_consensus、grades_news、grades_latest_news。params 为额外查询参数的 JSON 字符串。""",
+)
+async def analyst_data(data_type: str, params: str = "") -> str:
+    mapping = {
+        "financial_estimates": "analyst-estimates",
+        "ratings_snapshot": "ratings-snapshot",
+        "ratings_historical": "ratings-historical",
+        "price_target_summary": "price-target-summary",
+        "price_target_consensus": "price-target-consensus",
+        "price_target_news": "price-target-news",
+        "price_target_latest_news": "price-target-latest-news",
+        "grades": "grades",
+        "grades_historical": "grades-historical",
+        "grades_consensus": "grades-consensus",
+        "grades_news": "grades-news",
+        "grades_latest_news": "grades-latest-news",
+    }
+    endpoint = mapping.get(data_type)
+    if not endpoint:
+        return "Error: invalid data_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="corporate_calendar",
+    description="""获取企业日历数据，类型包括：dividends、dividends_calendar、earnings、earnings_calendar、ipos_calendar、ipos_disclosure、ipos_prospectus、splits、splits_calendar。params 为额外查询参数的 JSON 字符串。""",
+)
+async def corporate_calendar(calendar_type: str, params: str = "") -> str:
+    mapping = {
+        "dividends": "dividends",
+        "dividends_calendar": "dividends-calendar",
+        "earnings": "earnings",
+        "earnings_calendar": "earnings-calendar",
+        "ipos_calendar": "ipos-calendar",
+        "ipos_disclosure": "ipos-disclosure",
+        "ipos_prospectus": "ipos-prospectus",
+        "splits": "splits",
+        "splits_calendar": "splits-calendar",
+    }
+    endpoint = mapping.get(calendar_type)
+    if not endpoint:
+        return "Error: invalid calendar_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="company_info_extended",
+    description="""获取公司扩展信息，类型包括：profile_cik、company_notes、stock_peers、delisted_companies、employee_count、historical_employee_count、market_capitalization、market_capitalization_batch、historical_market_capitalization、shares_float、shares_float_all。params 为额外查询参数的 JSON 字符串。""",
+)
+async def company_info_extended(info_type: str, params: str = "") -> str:
+    mapping = {
+        "profile_cik": "profile-cik",
+        "company_notes": "company-notes",
+        "stock_peers": "stock-peers",
+        "delisted_companies": "delisted-companies",
+        "employee_count": "employee-count",
+        "historical_employee_count": "historical-employee-count",
+        "market_capitalization": "market-capitalization",
+        "market_capitalization_batch": "market-capitalization-batch",
+        "historical_market_capitalization": "historical-market-capitalization",
+        "shares_float": "shares-float",
+        "shares_float_all": "shares-float-all",
+    }
+    endpoint = mapping.get(info_type)
+    if not endpoint:
+        return "Error: invalid info_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="mergers_acquisitions",
+    description="""获取并购相关信息，类型包括：latest、search。params 为额外查询参数的 JSON 字符串。""",
+)
+async def mergers_acquisitions(ma_type: str, params: str = "") -> str:
+    mapping = {
+        "latest": "mergers-acquisitions-latest",
+        "search": "mergers-acquisitions-search",
+    }
+    endpoint = mapping.get(ma_type)
+    if not endpoint:
+        return "Error: invalid ma_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="cot_report",
+    description="""获取COT报告相关数据，类型包括：report、analysis、list。params 为额外查询参数的 JSON 字符串。""",
+)
+async def cot_report(report_type: str, params: str = "") -> str:
+    mapping = {
+        "report": "commitment-of-traders-report",
+        "analysis": "commitment-of-traders-analysis",
+        "list": "commitment-of-traders-list",
+    }
+    endpoint = mapping.get(report_type)
+    if not endpoint:
+        return "Error: invalid report_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="dcf_valuation",
+    description="""获取DCF估值数据，类型包括：discounted_cash_flow、levered_discounted_cash_flow、custom_discounted_cash_flow。params 为额外查询参数的 JSON 字符串。""",
+)
+async def dcf_valuation(dcf_type: str, params: str = "") -> str:
+    mapping = {
+        "discounted_cash_flow": "discounted-cash-flow",
+        "levered_discounted_cash_flow": "levered-discounted-cash-flow",
+        "custom_discounted_cash_flow": "custom-discounted-cash-flow",
+    }
+    endpoint = mapping.get(dcf_type)
+    if not endpoint:
+        return "Error: invalid dcf_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="crypto_market_data",
+    description="""获取加密货币市场数据，类型包括：list、quote、quote_short、batch_quotes、historical_eod_light、historical_eod_full、intraday_1min、intraday_5min、intraday_1hour。params 为额外查询参数的 JSON 字符串。""",
+)
+async def crypto_market_data(data_type: str, params: str = "") -> str:
+    mapping = {
+        "list": "cryptocurrency-list",
+        "quote": "quote",
+        "quote_short": "quote-short",
+        "batch_quotes": "batch-crypto-quotes",
+        "historical_eod_light": "historical-price-eod/light",
+        "historical_eod_full": "historical-price-eod/full",
+        "intraday_1min": "historical-chart/1min",
+        "intraday_5min": "historical-chart/5min",
+        "intraday_1hour": "historical-chart/1hour",
+    }
+    endpoint = mapping.get(data_type)
+    if not endpoint:
+        return "Error: invalid data_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="crypto_news",
+    description="""获取加密货币新闻，类型包括：latest、search。params 为额外查询参数的 JSON 字符串。""",
+)
+async def crypto_news(news_type: str, params: str = "") -> str:
+    mapping = {
+        "latest": "news/crypto-latest",
+        "search": "news/crypto",
+    }
+    endpoint = mapping.get(news_type)
+    if not endpoint:
+        return "Error: invalid news_type"
+    extra = json.loads(params) if params else {}
+    return _call_fmp_api(endpoint, extra)
+
+
+@fmp_server.tool(
+    name="bulk_eod",
+    description="""批量获取某天的收盘数据。date 为 YYYY-MM-DD 格式。params 为额外查询参数的 JSON 字符串。""",
+)
+async def bulk_eod(date: str, params: str = "") -> str:
+    extra = json.loads(params) if params else {}
+    extra["date"] = date
+    return _call_fmp_api("eod-bulk", extra)
 
 
 if __name__ == "__main__":
