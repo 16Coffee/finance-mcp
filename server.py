@@ -26,36 +26,36 @@ fmp_server = FastMCP(
     instructions="""
 # Financial Modeling Prep MCP Server
 
-This server retrieves stock market data using Financial Modeling Prep APIs.
-Before using these tools, set the `FMP_API_KEY` environment
-variable to your Financial Modeling Prep API key.
+本服务器通过 Financial Modeling Prep API 提供股票与财务数据。
+使用这些工具前，请将环境变量 `FMP_API_KEY` 设置为你的 API 密钥。
 
-Available.tools:
-- get_historical_stock_prices: Get historical stock prices for a given ticker symbol. Includes Date, Open, High, Low, Close, and Volume.
-- get_stock_info: Get company overview and financial metrics for a given ticker symbol.
-- get_news_sentiment: Get recent news articles for a given ticker symbol.
-- get_stock_actions: Get dividends and stock split history for a given ticker symbol.
-- get_financial_statement: Get financial statements for a given ticker symbol. Supported types: income_stmt_annual, income_stmt_quarterly, balance_sheet_annual, balance_sheet_quarterly, cashflow_annual, cashflow_quarterly.
-- get_option_expiration_dates: Fetch available option expiration dates for a given ticker symbol.
-- get_option_chain: Fetch the option chain for a given ticker symbol, expiration date, and option type.
+可用工具：
+- get_historical_stock_prices：获取指定股票的历史价格。
+- get_stock_info：获取公司概况和关键指标。
+- get_news_sentiment：获取股票相关新闻。
+- get_stock_actions：获取股票分红与拆股记录。
+- get_financial_statement：获取公司财报（收入表、资产负债表、现金流量表）。
+- get_option_expiration_dates：获取股票可用的期权到期日。
+- get_option_chain：获取期权链数据。
+- search_companies：根据关键字搜索公司。
+- get_top_gainers：获取今日涨幅榜。
+- get_top_losers：获取今日跌幅榜。
 """,
 )
 
 
 @fmp_server.tool(
     name="get_historical_stock_prices",
-    description="""Get historical stock prices for a given ticker symbol using Financial Modeling Prep. Includes Date, Open, High, Low, Close and Volume.
-Args:
+    description="""获取指定股票的历史价格，返回日期、开盘价、最高价、最低价、收盘价和成交量。
+参数说明：
     ticker: str
-        The ticker symbol of the stock to get historical prices for, e.g. "AAPL"
+        股票代码，例如 "AAPL"
     period : str
-        Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
-        Either Use period parameter or use start and end
-        Default is "1mo"
+        支持的周期：1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max；
+        也可以使用开始和结束日期；默认 "1mo"
     interval : str
-        Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
-        Intraday data cannot extend last 60 days
-        Default is "1d"
+        支持的间隔：1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo；
+        分钟级数据最多可追溯60天；默认 "1d"
 """,
 )
 async def get_historical_stock_prices(
@@ -118,11 +118,11 @@ async def get_historical_stock_prices(
 
 @fmp_server.tool(
     name="get_stock_info",
-    description="""Get company overview and key metrics for a given ticker symbol using Financial Modeling Prep.
+    description="""获取公司概况及关键财务指标。
 
-Args:
+参数说明：
     ticker: str
-        The ticker symbol of the stock to get information for, e.g. "AAPL"
+        股票代码，例如 "AAPL"
 """,
 )
 async def get_stock_info(ticker: str) -> str:
@@ -143,11 +143,11 @@ async def get_stock_info(ticker: str) -> str:
 
 @fmp_server.tool(
     name="get_news_sentiment",
-    description="""Get news for a given ticker symbol using Financial Modeling Prep.
+    description="""获取指定股票的相关新闻列表。
 
-Args:
+参数说明：
     ticker: str
-        The ticker symbol of the stock to get news for, e.g. "AAPL"
+        股票代码，例如 "AAPL"
 """,
 )
 async def get_news_sentiment(ticker: str) -> str:
@@ -182,11 +182,11 @@ async def get_news_sentiment(ticker: str) -> str:
 
 @fmp_server.tool(
     name="get_stock_actions",
-    description="""Get stock dividends and stock splits for a given ticker symbol using Financial Modeling Prep.
+    description="""获取股票的分红与拆股历史。
 
-Args:
+参数说明：
     ticker: str
-        The ticker symbol of the stock to get stock actions for, e.g. "AAPL"
+        股票代码，例如 "AAPL"
 """,
 )
 async def get_stock_actions(ticker: str) -> str:
@@ -224,13 +224,13 @@ async def get_stock_actions(ticker: str) -> str:
 
 @fmp_server.tool(
     name="get_financial_statement",
-    description="""Get financial statement for a given ticker symbol using Financial Modeling Prep. Supported types: income_stmt_annual, income_stmt_quarterly, balance_sheet_annual, balance_sheet_quarterly, cashflow_annual, cashflow_quarterly.
+    description="""获取公司财报，类型包括年度/季度的收入表、资产负债表和现金流量表。
 
-Args:
+参数说明：
     ticker: str
-        The ticker symbol of the stock to get financial statement for, e.g. "AAPL"
+        股票代码，例如 "AAPL"
     financial_type: str
-        The type of financial statement to get. Use one of: income_stmt_annual, income_stmt_quarterly, balance_sheet_annual, balance_sheet_quarterly, cashflow_annual, cashflow_quarterly.
+        财报类型：income_stmt_annual、income_stmt_quarterly、balance_sheet_annual、balance_sheet_quarterly、cashflow_annual、cashflow_quarterly
 """,
 )
 async def get_financial_statement(ticker: str, financial_type: str) -> str:
@@ -273,11 +273,11 @@ async def get_financial_statement(ticker: str, financial_type: str) -> str:
 
 @fmp_server.tool(
     name="get_option_expiration_dates",
-    description="""Fetch the available options expiration dates for a given ticker symbol using Financial Modeling Prep.
+    description="""获取指定股票可用的期权到期日。
 
-Args:
+参数说明：
     ticker: str
-        The ticker symbol of the stock to get option expiration dates for, e.g. "AAPL"
+        股票代码，例如 "AAPL"
 """,
 )
 async def get_option_expiration_dates(ticker: str) -> str:
@@ -302,15 +302,15 @@ async def get_option_expiration_dates(ticker: str) -> str:
 
 @fmp_server.tool(
     name="get_option_chain",
-    description="""Fetch the option chain for a given ticker symbol, expiration date, and option type using Financial Modeling Prep.
+    description="""根据股票代码、到期日和期权类型获取期权链数据。
 
-Args:
+参数说明：
     ticker: str
-        The ticker symbol of the stock to get option chain for, e.g. "AAPL"
+        股票代码，例如 "AAPL"
     expiration_date: str
-        The expiration date for the options chain (format: 'YYYY-MM-DD')
+        期权到期日，格式为 'YYYY-MM-DD'
     option_type: str
-        The type of option to fetch ('calls' or 'puts')
+        期权类型：'calls' 或 'puts'
 """,
 )
 async def get_option_chain(ticker: str, expiration_date: str, option_type: str) -> str:
@@ -339,6 +339,82 @@ async def get_option_chain(ticker: str, expiration_date: str, option_type: str) 
         and item.get("optionType", "").lower() == option_type.lower()
     ]
     return json.dumps(filtered)
+
+
+@fmp_server.tool(
+    name="search_companies",
+    description="""根据关键字搜索公司信息。
+
+参数说明：
+    query: str
+        搜索关键字
+    limit: int
+        返回结果数量，默认 10
+    exchange: str
+        交易所代码，可选
+""",
+)
+async def search_companies(query: str, limit: int = 10, exchange: str = "") -> str:
+    """根据关键字搜索公司"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    params = {"query": query, "limit": limit, "apikey": api_key}
+    if exchange:
+        params["exchange"] = exchange
+
+    url = "https://financialmodelingprep.com/api/v3/search"
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: searching companies: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_top_gainers",
+    description="""获取今日涨幅最大的股票列表。""",
+)
+async def get_top_gainers() -> str:
+    """获取今日涨幅榜"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/api/v3/stock_market/gainers"
+    try:
+        resp = requests.get(url, params={"apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting top gainers: {e}"
+    return json.dumps(data)
+
+
+@fmp_server.tool(
+    name="get_top_losers",
+    description="""获取今日跌幅最大的股票列表。""",
+)
+async def get_top_losers() -> str:
+    """获取今日跌幅榜"""
+
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        return "Error: FMP_API_KEY environment variable not set."
+
+    url = "https://financialmodelingprep.com/api/v3/stock_market/losers"
+    try:
+        resp = requests.get(url, params={"apikey": api_key}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return f"Error: getting top losers: {e}"
+    return json.dumps(data)
 
 
 if __name__ == "__main__":
